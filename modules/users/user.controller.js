@@ -122,4 +122,15 @@ const getProfile = async (req, res) => {
     }
 };
 
-module.exports = { getProfile, signUp, login };
+const users = async (req, res) => {
+    try {
+        const db = getDB();
+        const result = await db.collection('users').find().toArray();
+        res.send(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+module.exports = { getProfile, signUp, login, users };
