@@ -1,11 +1,10 @@
 const { ObjectId } = require('mongodb');
 const { getDB } = require('../../config/db');
 
-const db = getDB(); // Get initialized MongoDB instance
-
 // Get all products
 const getProducts = async (req, res) => {
     try {
+        const db = getDB(); // Get initialized MongoDB instance
         const products = await db.collection("products").find().toArray();
         res.send(products);
     } catch (error) {
@@ -17,6 +16,7 @@ const getProducts = async (req, res) => {
 // Get a single product by ID
 const getProductById = async (req, res) => {
     try {
+        const db = getDB(); // Get initialized MongoDB instance
         const { id } = req.params;
         const product = await db.collection("products").findOne({ _id: new ObjectId(id) });
         if (!product) {
@@ -32,6 +32,7 @@ const getProductById = async (req, res) => {
 // Create a new product
 const createProduct = async (req, res) => {
     try {
+        const db = getDB(); // Get initialized MongoDB instance
         const data = { ...req.body };
         const result = await db.collection("products").insertOne({
             ...data,
@@ -54,6 +55,7 @@ const createProduct = async (req, res) => {
 // Update an existing product by ID
 const updateProduct = async (req, res) => {
     try {
+        const db = getDB(); // Get initialized MongoDB instance
         const { id } = req.params;
         const data = { ...req.body };
 
@@ -83,6 +85,7 @@ const updateProduct = async (req, res) => {
 // Delete a product by ID
 const deleteProduct = async (req, res) => {
     try {
+        const db = getDB(); // Get initialized MongoDB instance
         const { id } = req.params;
         const result = await db.collection("products").deleteOne({ _id: new ObjectId(id) });
 
