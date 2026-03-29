@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { signUp, login, users, getProfile } = require('../users/user.controller.js');
+const { signUp, login, users, getProfile, createJWT, socialAuth } = require('../users/user.controller.js');
 const verifyToken = require('../../middlewares/verifyToken');
 
 /**
@@ -17,12 +17,17 @@ router.post('/signup', signUp);
  */
 router.post('/login', login);
 
+// social auth
+router.post('/social-auth', socialAuth);
+
 /**
  * Get All Users
  * Endpoint: GET /api/users/
  * Returns a list of all users (for admin or testing purposes).
  */
+router.post('/jwt', createJWT);
 router.get('/', users);
+
 
 /**
  * Get Authenticated User Profile
@@ -31,5 +36,6 @@ router.get('/', users);
  * Returns the profile of the logged-in user, excluding password.
  */
 router.get('/me', verifyToken, getProfile);
+
 
 module.exports = router;

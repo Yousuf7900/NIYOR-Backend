@@ -1,25 +1,30 @@
 const { MongoClient } = require('mongodb');
 
-let db; // Shared database instance
+let db;
+let client;
 
 const connectDB = async () => {
     try {
-        if (db) {
-            return db; // Reuse existing connection (prevents multiple connections)
+        if (db) return db;
+
+        if (!process.env.MONGO_URI) {
+            throw new Error("MONGO_URI is missing in .env");
         }
 
-        const client = new MongoClient(process.env.MONGO_URI); // Initialize client with URI
+        if (!process.env.DatabaseName) {
+            throw new Error("DatabaseName is missing in .env");
+        }
 
-        await client.connect(); // Establish connection to MongoDB server
+        client = new MongoClient(process.env.MONGO_URI);
+        await client.connect();
 
-        db = client.db(process.env.DatabaseName); // Select database
+        db = client.db(process.env.DatabaseName);
 
         console.log("MongoDB Connected Successfully");
-
-        return db; // Return initialized DB instance
+        return db;
     } catch (error) {
         console.error("MongoDB Connection Failed:", error.message);
-        process.exit(1); // Terminate process on failure
+        throw error;
     }
 };
 
@@ -27,7 +32,7 @@ const getDB = () => {
     if (!db) {
         throw new Error("Database not initialized. Call connectDB first.");
     }
-    return db; // Provide access to existing DB instance
+    return db;
 };
 
 module.exports = { connectDB, getDB };

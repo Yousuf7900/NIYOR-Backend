@@ -5,7 +5,11 @@ const userRoutes = require('./modules/users/user.routes');
 const app = express();
 
 app.use(express.json()); // Parse incoming JSON payloads
-app.use(cors()); // Enable cross-origin requests
+app.use(cors(
+    {
+        origin: 'http://localhost:5173'
+    }
+)); // Enable cross-origin requests
 
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);

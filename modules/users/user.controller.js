@@ -1,4 +1,3 @@
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { getDB } = require('../../config/db');
 const { ObjectId } = require('mongodb');
@@ -6,17 +5,14 @@ const { ObjectId } = require('mongodb');
 /**
  * User Signup
  * Endpoint: POST /api/users/signup
- * Creates a new user account after validating email uniqueness and hashing password.
+ * Creates a new user in the database.
+ * Checks whether the email already exists before inserting.
  */
 const signUp = async (req, res) => {
     try {
         const db = getDB();
-        const { name, email, password, phone, address, lastLoginAt, createdAt } = req.body;
-
-        // Validate required fields
-        if (!name || !email || !password) {
-            return res.status(400).json({ message: "Name, email, and password required" });
-        }
+        const { name, email, phone, lastLoginAt, createdAt } = req.body;
+        console.log(req.body);
 
         // Check if email already exists
         const existingUser = await db.collection('users').findOne({ email });
@@ -24,17 +20,12 @@ const signUp = async (req, res) => {
             return res.status(409).json({ message: "Email already exists" });
         }
 
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
         // Insert new user
         const result = await db.collection('users').insertOne({
             name,
             email,
-            password: hashedPassword,
             phone: phone || null,
-            address: address || null,
-            role: "customer", // Default role
+            role: "customer",
             createdAt: createdAt || new Date(),
             updatedAt: new Date(),
             lastLoginAt: lastLoginAt || null
@@ -50,28 +41,17 @@ const signUp = async (req, res) => {
 /**
  * User Login
  * Endpoint: POST /api/users/login
- * Authenticates a user and returns a JWT token if successful.
+ * Finds a user by email and updates the last login time.
  */
 const login = async (req, res) => {
     try {
         const db = getDB();
-        const { email, password, lastLoginAt } = req.body;
-
-        // Validate input
-        if (!email || !password) {
-            return res.status(400).json({ message: "Email and password required" });
-        }
+        const { email, lastLoginAt } = req.body;
 
         // Find user by email
         const user = await db.collection('users').findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "User not found" });
-        }
-
-        // Compare password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ message: "Incorrect password" });
         }
 
         // Update last login timestamp
@@ -81,25 +61,96 @@ const login = async (req, res) => {
             }
         });
 
-        // Generate JWT token
-        const token = jwt.sign(
-            { userId: user._id, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
+        return res.status(200).json({
+            message: "Login successful",
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email
+            }
+        })
 
-        res.json({ token });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Server error" });
     }
 };
 
+// Social login
+const socialAuth = async (req, res) => {
+    try {
+        const db = getDB();
+        const {
+            name,
+            email,
+            uid,
+            phone,
+            photoURL,
+            createdAt,
+            lastLoginAt,
+            provider
+        } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        const existingUser = await db.collection('users').findOne({ email });
+
+        if (!existingUser) {
+            const newUser = {
+                name: name || null,
+                email,
+                uid: uid || null,
+                phone: phone || null,
+                photoURL: photoURL || null,
+                provider: provider || "google",
+                role: "customer",
+                createdAt: createdAt || new Date(),
+                updatedAt: new Date(),
+                lastLoginAt: lastLoginAt || new Date()
+            };
+
+            const result = await db.collection('users').insertOne(newUser);
+
+            return res.status(201).json({
+                message: "Social user created successfully",
+                userId: result.insertedId,
+                isNewUser: true
+            });
+        }
+
+        await db.collection('users').updateOne(
+            { _id: existingUser._id },
+            {
+                $set: {
+                    name: name || existingUser.name || null,
+                    uid: uid || existingUser.uid || null,
+                    phone: phone || existingUser.phone || null,
+                    photoURL: photoURL || existingUser.photoURL || null,
+                    provider: provider || existingUser.provider || "google",
+                    lastLoginAt: lastLoginAt || new Date(),
+                    updatedAt: new Date()
+                }
+            }
+        );
+
+        return res.status(200).json({
+            message: "Social login successful",
+            userId: existingUser._id,
+            isNewUser: false
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Server error" });
+    }
+}
+
 /**
  * Get User Profile
  * Endpoint: GET /api/users/profile
- * Retrieves the authenticated user's profile, excluding the password field.
- * Requires JWT authentication middleware that sets `req.user`.
+ * Retrieves the authenticated user's profile.
+ * Requires authentication middleware that sets req.user.
  */
 const getProfile = async (req, res) => {
     try {
@@ -122,6 +173,11 @@ const getProfile = async (req, res) => {
     }
 };
 
+/**
+ * Get All Users
+ * Endpoint: GET /api/users
+ * Returns all users from the database.
+ */
 const users = async (req, res) => {
     try {
         const db = getDB();
@@ -133,4 +189,32 @@ const users = async (req, res) => {
     }
 };
 
-module.exports = { getProfile, signUp, login, users };
+/**
+ * Create JWT
+ * Endpoint: POST /api/users/jwt
+ * Finds a user by email and creates a JWT token.
+ */
+const createJWT = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+        const db = getDB();
+        const user = await db.collection('users').findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        const token = jwt.sign(
+            { userId: user._id.toString(), role: user.role, email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+        res.send({ token });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error" });
+    }
+}
+
+module.exports = { getProfile, signUp, login, users, createJWT, socialAuth };

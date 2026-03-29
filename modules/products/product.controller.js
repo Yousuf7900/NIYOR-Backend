@@ -18,7 +18,9 @@ const getProductById = async (req, res) => {
     try {
         const db = getDB(); // Get initialized MongoDB instance
         const { id } = req.params;
-        const product = await db.collection("products").findOne({ _id: new ObjectId(id) });
+
+        // for testing -> update this with Object Id later.
+        const product = await db.collection("products").findOne({ _id: id });
         if (!product) {
             return res.status(404).send({ message: "Product not found" });
         }
