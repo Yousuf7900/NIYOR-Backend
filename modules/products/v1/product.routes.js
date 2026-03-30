@@ -7,7 +7,7 @@ const {
     deleteProduct,
     getProductById,
     updateProduct
-} = require('../products/product.controller');
+} = require('./product.controller');
 
 // Get all products
 // Endpoint: GET /api/products

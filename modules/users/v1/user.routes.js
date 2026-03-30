@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { signUp, login, users, getProfile, createJWT, socialAuth } = require('../users/user.controller.js');
-const verifyToken = require('../../middlewares/verifyToken');
+const { signUp, login, users, getProfile, createJWT, socialAuth } = require('./user.controller');
+const verifyToken = require('../../../middlewares/verifyToken.js');
 
 /**
  * User Signup

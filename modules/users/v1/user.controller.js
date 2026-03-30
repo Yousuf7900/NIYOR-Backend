@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { getDB } = require('../../config/db');
+const { getDB } = require('../../../config/db');
 const { ObjectId } = require('mongodb');
 
 /**
